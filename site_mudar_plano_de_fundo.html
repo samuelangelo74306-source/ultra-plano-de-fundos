@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ULTRA PLANO DE FUNDOS</title>
+
+<link rel="icon" href="https://cdn-icons-png.flaticon.com/512/3212/3212608.png">
+
+<style>
+
+body{
+font-family:Arial;
+margin:0;
+color:white;
+overflow-x:hidden;
+background:black;
+}
+
+/* ESTRELAS ANIMADAS */
+body::before{
+content:"";
+position:fixed;
+width:200%;
+height:200%;
+background:url("https://www.transparenttextures.com/patterns/stardust.png");
+animation:starsMove 60s linear infinite;
+opacity:.35;
+z-index:-2;
+}
+
+@keyframes starsMove{
+from{transform:translate(0,0)}
+to{transform:translate(-600px,-600px)}
+}
+
+/* PLANETA GIRANDO */
+.planet{
+position:fixed;
+right:40px;
+top:40px;
+width:120px;
+animation:spinPlanet 40s linear infinite;
+filter:drop-shadow(0 0 20px #38bdf8);
+z-index:-1;
+}
+
+@keyframes spinPlanet{
+from{transform:rotate(0deg)}
+to{transform:rotate(360deg)}
+}
+
+/* EFEITO WARP SPEED AO ABRIR */
+.warp{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:black;
+animation:warpOut 1.2s ease forwards;
+z-index:9999;
+}
+
+@keyframes warpOut{
+0%{opacity:1;transform:scale(1)}
+100%{opacity:0;transform:scale(2);visibility:hidden}
+}
+
+header{
+text-align:center;
+padding:25px;
+font-size:36px;
+font-weight:bold;
+letter-spacing:4px;
+color:#38bdf8;
+text-shadow:0 0 12px #38bdf8;
+}
+
+.layout{
+display:grid;
+grid-template-columns:1fr 420px 1fr;
+gap:20px;
+padding:20px;
+}
+
+.side-box{
+height:260px;
+border-radius:22px;
+background:rgba(15,23,42,.6);
+backdrop-filter:blur(10px);
+box-shadow:0 0 20px #6366f1;
+padding:15px;
+}
+
+.center{text-align:center}
+
+.upload-box{
+height:170px;
+border:2px dashed #38bdf8;
+border-radius:20px;
+display:flex;
+align-items:center;
+justify-content:center;
+cursor:pointer;
+margin-bottom:15px;
+background:rgba(15,23,42,.6);
+transition:.3s;
+}
+
+.upload-box:hover{
+box-shadow:0 0 15px #38bdf8;
+transform:scale(1.03);
+}
+
+button{
+padding:10px 16px;
+border:none;
+border-radius:12px;
+background:linear-gradient(45deg,#6366f1,#38bdf8);
+color:white;
+cursor:pointer;
+margin:4px;
+font-weight:bold;
+box-shadow:0 0 10px #6366f1;
+transition:.25s;
+}
+
+button:hover{
+transform:scale(1.05);
+box-shadow:0 0 18px #38bdf8;
+}
+
+.bg-options img{
+width:70px;
+height:45px;
+margin:4px;
+border-radius:8px;
+cursor:pointer;
+box-shadow:0 0 8px #38bdf8;
+}
+
+canvas{
+display:block;
+margin:25px auto;
+max-width:92%;
+border-radius:20px;
+box-shadow:0 0 30px #6366f1;
+}
+
+input{display:none}
+
+.slider{
+width:220px;
+accent-color:#38bdf8;
+}
+
+.title-mini{
+color:#c7d2fe;
+margin-bottom:6px;
+font-weight:bold;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="warp"></div>
+<img class="planet" src="https://cdn-icons-png.flaticon.com/512/3212/3212608.png">
+
+<header>🚀 ULTRA PLANO DE FUNDOS</header>
+
+<div class="layout">
+
+<div class="side-box" style="display:flex;flex-direction:column;align-items:center;gap:10px">
+
+<div class="title-mini">🌌 FUNDO</div>
+<button onclick="bgUpload.click()">Enviar fundo</button>
+<input type="file" id="bgUpload" accept="image/*">
+
+<div class="title-mini">⭐ Fundos rápidos</div>
+<img src="https://picsum.photos/id/1015/200/150" onclick="setPreset(this.src)">
+
+
+</div>
+
+<div class="center">
+
+<div class="upload-box" onclick="fgUpload.click()">
+📸 Clique para escolher FOTO PRINCIPAL
+</div>
+<input type="file" id="fgUpload" accept="image/*">
+
+<div class="title-mini">🪐 Tamanho da pessoa</div>
+<input class="slider" type="range" min="0.2" max="2" step="0.1" value="1" id="sizeSlider">
+
+<div>
+<button onclick="toggleEraseMode()">Borracha</button>
+<button onclick="autoRemoveBackground()">Remover fundo</button>
+<button onclick="toggleSmartCut()">Recorte inteligente</button>
+<button onclick="downloadImage()">Baixar imagem</button>
+</div>
+
+</div>
+
+<div class="side-box" style="display:flex;flex-direction:column;align-items:center;gap:10px">
+
+<div class="title-mini">✨ EFEITOS</div>
+<button onclick="applyGray()">Preto e branco</button>
+<button onclick="applyBlur()">Blur</button>
+<button onclick="applyBright()">Brilho</button>
+<button onclick="resetEffects()">Resetar</button>
+
+</div>
+
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+
+const canvas=document.getElementById("canvas")
+const ctx=canvas.getContext("2d")
+
+const bgUpload=document.getElementById("bgUpload")
+const fgUpload=document.getElementById("fgUpload")
+const sizeSlider=document.getElementById("sizeSlider")
+
+let bgImage=new Image()
+let fgImage=new Image()
+
+let posX=150
+let posY=120
+let scale=1
+let dragging=false
+let eraseMode=false
+let smartCutMode=false
+
+bgUpload.addEventListener("change",e=>{
+const file=e.target.files[0]
+if(!file)return
+
+const reader=new FileReader()
+reader.onload=function(ev){
+bgImage=new Image()
+bgImage.onload=function(){
+if(!canvas.width){
+canvas.width=bgImage.width
+canvas.height=bgImage.height
+}
+render()
+}
+bgImage.src=ev.target.result
+}
+reader.readAsDataURL(file)
+})
+
+fgUpload.addEventListener("change",e=>{
+const file=e.target.files[0]
+if(!file)return
+
+const reader=new FileReader()
+reader.onload=function(ev){
+fgImage=new Image()
+fgImage.onload=function(){
+canvas.width=fgImage.width
+canvas.height=fgImage.height
+posX=canvas.width/2
+posY=canvas.height/2
+render()
+}
+fgImage.src=ev.target.result
+}
+reader.readAsDataURL(file)
+})("change",e=>{
+const file=e.target.files[0]
+if(!file)return
+
+fgImage.src=URL.createObjectURL(file)
+
+fgImage.onload=()=>{
+canvas.width=fgImage.width
+canvas.height=fgImage.height
+render()
+}
+})
+
+sizeSlider.addEventListener("input",()=>{
+scale=sizeSlider.value
+render()
+})
+
+canvas.addEventListener("mousedown",()=>dragging=true)
+canvas.addEventListener("mouseup",()=>dragging=false)
+
+canvas.addEventListener("mousemove",e=>{
+
+if(eraseMode){
+ctx.clearRect(e.offsetX-10,e.offsetY-10,20,20)
+return
+}
+
+if(!dragging)return
+
+posX=e.offsetX
+posY=e.offsetY
+render()
+
+})
+
+canvas.addEventListener("click",e=>{
+
+if(!smartCutMode)return
+
+const imgData=ctx.getImageData(0,0,canvas.width,canvas.height)
+
+const index=(e.offsetY*canvas.width+e.offsetX)*4
+
+const r=imgData.data[index]
+const g=imgData.data[index+1]
+const b=imgData.data[index+2]
+
+for(let i=0;i<imgData.data.length;i+=4){
+
+if(Math.abs(imgData.data[i]-r)<40 &&
+Math.abs(imgData.data[i+1]-g)<40 &&
+Math.abs(imgData.data[i+2]-b)<40){
+
+imgData.data[i+3]=0
+}
+
+}
+
+ctx.putImageData(imgData,0,0)
+
+})
+
+function render(){
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+if(bgImage.src)
+ctx.drawImage(bgImage,0,0,canvas.width,canvas.height)
+
+if(fgImage.src){
+
+const w=fgImage.width*scale
+const h=fgImage.height*scale
+
+ctx.drawImage(fgImage,posX-w/2,posY-h/2,w,h)
+
+}
+
+}
+
+function setPreset(src){
+
+bgImage.src=src
+
+bgImage.onload=()=>{
+canvas.width=bgImage.width
+canvas.height=bgImage.height
+render()
+}
+
+}
+
+function toggleEraseMode(){eraseMode=!eraseMode}
+
+function toggleSmartCut(){smartCutMode=!smartCutMode}
+
+let currentFilter="none"
+
+function applyGray(){
+currentFilter="grayscale(100%)"
+render()
+}
+
+function applyBlur(){
+currentFilter="blur(3px)"
+render()
+}
+
+function applyBright(){
+currentFilter="brightness(1.3)"
+render()
+}
+
+function resetEffects(){
+currentFilter="none"
+render()
+}
+
+function autoRemoveBackground(){
+if(!fgImage.src)return
+
+ctx.drawImage(fgImage,0,0)
+
+let img=ctx.getImageData(0,0,canvas.width,canvas.height)
+
+for(let i=0;i<img.data.length;i+=4){
+let brightness=(img.data[i]+img.data[i+1]+img.data[i+2])/3
+if(brightness>200) img.data[i+3]=0
+}
+
+ctx.putImageData(img,0,0)
+}
+
+function downloadImage(){
+if(canvas.width===0)return
+
+const link=document.createElement("a")
+link.download="ULTRA_PLANO_DE_FUNDOS.png"
+link.href=canvas.toDataURL()
+link.click()
+}
+
+function render(){
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+ctx.filter=currentFilter
+
+if(bgImage.src)
+ctx.drawImage(bgImage,0,0,canvas.width,canvas.height)
+
+if(fgImage.src){
+const w=fgImage.width*scale
+const h=fgImage.height*scale
+ctx.drawImage(fgImage,posX-w/2,posY-h/2,w,h)
+}
+
+ctx.filter="none"
+}(){
+
+const link=document.createElement("a")
+link.download="imagem_editada.png"
+link.href=canvas.toDataURL()
+link.click()
+
+}
+
+
+// INICIALIZAÇÃO FORÇADA PARA FUNCIONAR OFFLINE EM QUALQUER PC
+window.onload=function(){
+if(canvas.width===0){
+canvas.width=800
+canvas.height=500
+}
+render()
+console.log("ULTRA PLANO DE FUNDOS carregado offline com sucesso")
+}
+
+// GARANTE RENDER SEMPRE QUE IMAGEM CARREGAR
+bgImage.onload=render
+fgImage.onload=render
+
+</script>
+
+
+<!-- PAINEL DE EDIÇÃO RÁPIDA -->
+<div id="painelEditor" style="position:fixed;bottom:20px;right:20px;background:rgba(15,23,42,.9);padding:15px;border-radius:15px;box-shadow:0 0 20px #38bdf8;display:none">
+<b>PAINEL RÁPIDO</b><br><br>
+<button onclick="trocarTitulo()">Mudar título</button>
+<button onclick="mudarCorSite()">Mudar cor do site</button>
+<button onclick="mostrarCanvas()">Mostrar tela</button>
+</div>
+
+<button onclick="togglePainel()" style="position:fixed;bottom:20px;left:20px">⚙️ EDITAR APP</button>
+
+<script>
+function togglePainel(){
+const p=document.getElementById("painelEditor")
+p.style.display=p.style.display==="none"?"block":"none"
+}
+
+function trocarTitulo(){
+const novo=prompt("Novo título do aplicativo:")
+if(novo)document.querySelector("header").innerText=novo
+}
+
+function mudarCorSite(){
+document.body.style.background="linear-gradient(black,#020617,#0ea5e9)"
+}
+
+function mostrarCanvas(){
+document.getElementById("canvas").style.display="block"
+}
+</script>
+
+</body>
+</html>
